@@ -1,4 +1,5 @@
 import tkinter as tk
+import random
 
 root = tk.Tk()
 root.title("VariVirus")
@@ -29,8 +30,11 @@ button2Opt = ["yes", "No"]
 button2 = tk.OptionMenu(leftPanel, button2Var, *button2Opt)
 button2.pack(pady = 10, padx = 10, fill = "x")
 
-button3 = tk.Button(leftPanel, text = "Start Sim", command = lambda: timelineStart())
+button3 = tk.Button(leftPanel, text = "Start Sim", command = lambda: toggleSimulation())
 button3.pack(pady = 10, padx = 10, fill = "x")
+
+button4 = tk.Button(leftPanel, text = "Reset Sim", command = lambda: resetSimulation())
+button4.pack(pady = 10, padx = 10, fill = "x")
 
 #right panel
 rightPanel = tk.Frame(mainFrame, bg = "white", bd = 1, relief = "solid")
@@ -55,23 +59,42 @@ timelineGrid()
 
 timelineRunning = False
 timelineCount = 0
+lastPoint = None
 
 def timelineUpdate():
-    global timelineCount
+    global timelineCount, lastPoint
     if not timelineRunning:
         return
     xPos = timelineCount * 50
-    if xPos < 1200:
-        timelineCanvas.create_rectangle(xPos, 0, xPos + 10, 200, fill = "blue")
+    if xPos >= 1200:
+        return
+    yPos = random.randint(30, 170)
+    rDot = 4
+    timelineCanvas.create_oval(xPos - rDot, yPos - rDot, xPos + rDot, yPos + rDot, fill = "red")
+    if lastPoint is not None:
+        timelineCanvas.create_line(lastPoint[0], lastPoint[1], xPos, yPos, fill = "blue", width = 2)
+    lastPoint = (xPos, yPos)
     timelineCount += 1
-    rightLowerBox.after(1000, timelineUpdate)
+    rightLowerBox.after(250, timelineUpdate)
 
-def timelineStart():
-    global timelineRunning, timelineCount
-    if not timelineRunning:
+def toggleSimulation():
+    global timelineRunning, timelineCount, lastPoint
+    if timelineRunning:
+        timelineRunning = False
+        button3.config(text = "Resume Sim")
+    else:
         timelineRunning = True
-        timelineCount = 0 
+        button3.config(text = "Pause Sim")
         timelineUpdate()
+
+def resetSimulation():
+    global timelineRunning, timelineCount, lastPoint
+    timelineRunning = False
+    timelineCount = 0
+    lastPoint = None
+    timelineCanvas.delete("all")
+    timelineGrid()
+    button3.config(text = "Start Sim")
 
 #go
 root.mainloop()
