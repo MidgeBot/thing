@@ -6,6 +6,7 @@ root.title("VariVirus")
 root.geometry("1200x800")
 
 ticker = 0
+gridlinePositions = []
 
 #title code
 titleFrame = tk.Frame(root, height = 50, bg = 'lightblue')
@@ -41,6 +42,11 @@ button4.pack(pady = 10, padx = 10, fill = "x")
 clockLabel = tk.Label(leftPanel, text = f"Day: {ticker}", bg = "black", font = ("Ariel", 12))
 clockLabel.pack(anchor = "center", padx = 10)
 
+displayNum = tk.Text(leftPanel, height = 20, width = 20, font = ("Ariel", 12))
+displayNum.pack(pady = 10, padx = 10, fill = "x")
+displayNum.insert("end", "values ?")
+displayNum.config(state = "disabled")
+
 #right panel
 rightPanel = tk.Frame(mainFrame, bg = "white", bd = 1, relief = "solid")
 rightPanel.pack(side = "right", fill = "both", expand = True)
@@ -48,50 +54,33 @@ rightPanel.pack(side = "right", fill = "both", expand = True)
 rightUpperBox = tk.Frame(rightPanel, bg = "white", bd = 1, relief = "solid")
 rightUpperBox.pack(fill = "both", expand = True, padx = 10, pady = (10, 5))
 
-rightUpperCanvas = tk.Canvas(rightUpperBox, bg = "white", height = 100)
-rightUpperCanvas.pack(fill = "both", expand = True)
+rightUpperLeftCanvas = tk.Canvas(rightUpperBox, bg = "white", height = 100)
+rightUpperLeftCanvas.pack(side = "left", fill = "both", expand = True)
+
+rightUpperRightCanvas = tk.Canvas(rightUpperBox, bg = "white", height = 100)
+rightUpperRightCanvas.pack(side = "left", fill = "both", expand = True)
 
 rightLowerBox = tk.Frame(rightPanel, height = 200, bg = "lightgrey", highlightbackground = "black", highlightthickness = 1)
 rightLowerBox.pack(fill = "x", padx = 10, pady = (0,10))
-
-'''
-#circle, just a test to see if i can even make this work :/ old and outdated, just here for the vibes
-circleRadius = 20
-circleY = 50
-circleLeftX = 20
-circle = rightUpperCanvas.create_oval(0, 0, 0, 0, fill = "green")
-
-circle = rightUpperCanvas.create_oval(circleLeftX - circleRadius, circleY - circleRadius, circleLeftX + circleRadius, circleY + circleRadius, fill = "green") #this is so awful i hate this
-
-def moveCircle():
-    global ticker
-    canvasWidth = rightUpperCanvas.winfo_width()
-    padding = 20
-    
-    if canvasWidth < 100:
-        canvasWidth = 1200
-    
-    if ticker % 2 == 0:
-        newX = padding #right?
-    else:
-        newX = canvasWidth - padding #left?
-    
-    rightUpperCanvas.coords(circle, newX - circleRadius, circleY - circleRadius, newX + circleRadius, circleY + circleRadius)
-'''
 
 #timeline shenanigans
 timelineCanvas = tk.Canvas(rightLowerBox, bg = "white", height = 200)
 timelineCanvas.pack(fill = "both", padx = 5, pady = 5)
 
 def timelineGrid(event = None):
+    global gridlinePositions
+
     timelineCanvas.delete("all")
-    gridCount = 16
+    gridCount = 17
 
     canvasWidth = timelineCanvas.winfo_width()
     gridSpacing = canvasWidth / (gridCount - 1)
 
+    gridlinePositions =[]
+
     for i in range(gridCount):
         x = i * gridSpacing
+        gridlinePositions.append(x)
         timelineCanvas.create_line(x, 0, x, 200, fill = "Lightgrey")
 
 timelineCanvas.bind("<Configure>", timelineGrid)
@@ -103,28 +92,39 @@ timelineCount = 0
 lastPoint = None
 
 def timelineUpdate():
-    global timelineCount, lastPoint, ticker
+    global timelineRunning, timelineCount, lastPoint, ticker
+
     if not timelineRunning:
         return
-    xPos = ticker * 50
-    if xPos >= 1200:
+    if ticker >= 17:
+        timelineRunning = False
+        button3.config(text = "Sim done")
         return
+    if ticker >= len(gridlinePositions):
+        return
+   
+    xPos = gridlinePositions[ticker]
     yPos = random.randint(30, 170) #CHANGE THIS WHEN WE GET ACTAUL NUMBERS IDK
     rDot = 4
+
     timelineCanvas.create_oval(xPos - rDot, yPos - rDot, xPos + rDot, yPos + rDot, fill = "red")
+    
     if lastPoint is not None:
         timelineCanvas.create_line(lastPoint[0], lastPoint[1], xPos, yPos, fill = "blue", width = 2)
+   
     lastPoint = (xPos, yPos)
+    displayNum.config(state = "normal")
+    displayNum.insert("end", f"Day {ticker} x={int(xPos)}, y={int(yPos)}\n")
+    displayNum.see("end")
+    displayNum.config(state = "disabled")
+
     ticker += 1
-    
-    #moveCircle()
-
     clockLabel.config(text = f"Day: {ticker}")
-
     rightLowerBox.after(500, timelineUpdate)
 
 def toggleSimulation():
     global timelineRunning, timelineCount, lastPoint
+
     if timelineRunning:
         timelineRunning = False
         button3.config(text = "Resume Sim")
@@ -135,6 +135,7 @@ def toggleSimulation():
 
 def resetSimulation():
     global timelineRunning, timelineCount, lastPoint, ticker
+
     timelineRunning = False
     timelineCount = 0
     lastPoint = None
