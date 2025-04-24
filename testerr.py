@@ -5,10 +5,18 @@ root = tk.Tk()
 root.title("VariVirus")
 root.geometry("1200x800")
 
-ticker = 0
+#variables
+ticker = 0 #what day are we on
+dayCount = 17 #max day count
+timelineRunning = False
 gridlinePositions = []
+dataPoints = []
 
-#title code
+#user entered variables NOT HOOKED UP TO ANYTHING YET but i think they go here. maybe.
+ageGroup = None
+vaccineStatus = None
+
+#title 
 titleFrame = tk.Frame(root, height = 50, bg = 'lightblue')
 titleFrame.pack(fill='x')
 
@@ -23,28 +31,28 @@ mainFrame.pack(fill = "both", expand = True)
 leftPanel = tk.Frame(mainFrame, width = 150, bg = "lightgrey")
 leftPanel.pack(side = "left", fill = "y")
 
-button1Var = tk.StringVar(value = "Age group")
+button1Var = tk.StringVar(value = "Age group") #Age group
 button1Opt = ["young", "old"]
 button1 = tk.OptionMenu(leftPanel, button1Var, * button1Opt)
 button1.pack(pady = 10, padx = 10, fill = "x")
 
-button2Var = tk.StringVar(value = "Vaccinated")
+button2Var = tk.StringVar(value = "Vaccinated") #vaccinated
 button2Opt = ["yes", "No"]
 button2 = tk.OptionMenu(leftPanel, button2Var, * button2Opt)
 button2.pack(pady = 10, padx = 10, fill = "x")
 
-button3 = tk.Button(leftPanel, text = "Start Sim", command = lambda: toggleSimulation())
+button3 = tk.Button(leftPanel, text = "Start Sim", command = lambda: toggleSimulation()) #start sim/pause sim depending on state
 button3.pack(pady = 10, padx = 10, fill = "x")
 
-button4 = tk.Button(leftPanel, text = "Reset Sim", command = lambda: resetSimulation())
+button4 = tk.Button(leftPanel, text = "Reset Sim", command = lambda: resetSimulation()) #reset sim
 button4.pack(pady = 10, padx = 10, fill = "x")
 
-clockLabel = tk.Label(leftPanel, text = f"Day: {ticker}", bg = "black", font = ("Ariel", 12))
+clockLabel = tk.Label(leftPanel, text = f"Day: {ticker}", bg = "black", font = ("Ariel", 12)) #day counter
 clockLabel.pack(anchor = "center", padx = 10)
 
-displayNum = tk.Text(leftPanel, height = 20, width = 20, font = ("Ariel", 12))
+displayNum = tk.Text(leftPanel, height = 20, width = 20, font = ("Ariel", 12)) #value outputs
 displayNum.pack(pady = 10, padx = 10, fill = "x")
-displayNum.insert("end", "values ?")
+displayNum.insert("end", "values: \n")
 displayNum.config(state = "disabled")
 
 #right panel
@@ -54,96 +62,109 @@ rightPanel.pack(side = "right", fill = "both", expand = True)
 rightUpperBox = tk.Frame(rightPanel, bg = "white", bd = 1, relief = "solid")
 rightUpperBox.pack(fill = "both", expand = True, padx = 10, pady = (10, 5))
 
-rightUpperLeftCanvas = tk.Canvas(rightUpperBox, bg = "white", height = 100)
+#left side of the upper right panel 
+leftPane = tk.Frame(rightUpperBox, bg = "white")
+leftPane.pack(side = "left", fill = "both", expand = True)
+
+rightUpperLeftCanvas = tk.Canvas(leftPane, bg = "white", height = 100)
 rightUpperLeftCanvas.pack(side = "left", fill = "both", expand = True)
 
-rightUpperRightCanvas = tk.Canvas(rightUpperBox, bg = "white", height = 100)
+leftTitle = tk.Label(leftPane, text = "leftie", bg = "lightblue", font = ("Arial", 12))
+leftTitle.pack(fill = "x")
+
+#right side of the upper right panel
+rightPane = tk.Frame(rightUpperBox, bg = "white")
+rightPane.pack(side = "left", fill = "both", expand = True)
+
+rightUpperRightCanvas = tk.Canvas(rightPane, bg = "white", height = 100)
 rightUpperRightCanvas.pack(side = "left", fill = "both", expand = True)
 
+rightTitle = tk.Label(rightPane, text = "rightie", bg = "lightblue", font = ("Arial", 12))
+rightTitle.pack(fill = "x")
+
+#timeline 
 rightLowerBox = tk.Frame(rightPanel, height = 200, bg = "lightgrey", highlightbackground = "black", highlightthickness = 1)
 rightLowerBox.pack(fill = "x", padx = 10, pady = (0,10))
 
-#timeline shenanigans
 timelineCanvas = tk.Canvas(rightLowerBox, bg = "white", height = 200)
 timelineCanvas.pack(fill = "both", padx = 5, pady = 5)
 
-def timelineGrid(event = None):
+def timelineGrid(event = None): #draws the gridelines + adds in the actual line
     global gridlinePositions
 
     timelineCanvas.delete("all")
-    gridCount = 17
+    timelineWidth = timelineCanvas.winfo_width()
+    timelineSpacing = timelineWidth / dayCount
+    gridlinePositions = [i * timelineSpacing for i in range (dayCount + 1)] #ew yuck
 
-    canvasWidth = timelineCanvas.winfo_width()
-    gridSpacing = canvasWidth / (gridCount - 1)
+    for x in gridlinePositions:
+        timelineCanvas.create_line(x, 0, x, 200, fill = "lightblue")
 
-    gridlinePositions =[]
-
-    for i in range(gridCount):
-        x = i * gridSpacing
-        gridlinePositions.append(x)
-        timelineCanvas.create_line(x, 0, x, 200, fill = "Lightgrey")
+    last = None
+    r = 4
+    for day, y in dataPoints:
+        x = gridlinePositions[day]
+        timelineCanvas.create_oval(x - r, y - r, x + r, y + r, fill = "red")
+        if last:
+            timelineCanvas.create_line(last[0], last[1], x, y, fill = "blue", width = 2)
+        last = (x, y)
 
 timelineCanvas.bind("<Configure>", timelineGrid)
 
-timelineGrid()
-
-timelineRunning = False
-timelineCount = 0
-lastPoint = None
-
-def timelineUpdate():
-    global timelineRunning, timelineCount, lastPoint, ticker
+def tickStep(): #clock moment
+    global ticker, timelineRunning
 
     if not timelineRunning:
         return
-    if ticker >= 17:
+    if ticker > dayCount:
         timelineRunning = False
-        button3.config(text = "Sim done")
+        button3.config(text = "Start Sim")
         return
-    if ticker >= len(gridlinePositions):
-        return
-   
-    xPos = gridlinePositions[ticker]
-    yPos = random.randint(30, 170) #CHANGE THIS WHEN WE GET ACTAUL NUMBERS IDK
-    rDot = 4
-
-    timelineCanvas.create_oval(xPos - rDot, yPos - rDot, xPos + rDot, yPos + rDot, fill = "red")
     
-    if lastPoint is not None:
-        timelineCanvas.create_line(lastPoint[0], lastPoint[1], xPos, yPos, fill = "blue", width = 2)
-   
-    lastPoint = (xPos, yPos)
+    yValue = random.randint(40, 120) #change this once we get actual values
+    dataPoints.append((ticker, yValue))
+
     displayNum.config(state = "normal")
-    displayNum.insert("end", f"Day {ticker} x={int(xPos)}, y={int(yPos)}\n")
+    displayNum.insert("end", f"Day {ticker}: y = {yValue}\n")
     displayNum.see("end")
     displayNum.config(state = "disabled")
 
+    timelineGrid()
+
     ticker += 1
     clockLabel.config(text = f"Day: {ticker}")
-    rightLowerBox.after(500, timelineUpdate)
+    rightLowerBox.after(500, tickStep)
 
-def toggleSimulation():
-    global timelineRunning, timelineCount, lastPoint
+def toggleSimulation(): #makes it so you can pause the sim
+    global timelineRunning
+    
+    timelineRunning = not timelineRunning
+    button3.config(text = "pause sim" if timelineRunning else "resume sim")
 
     if timelineRunning:
-        timelineRunning = False
-        button3.config(text = "Resume Sim")
-    else:
-        timelineRunning = True
-        button3.config(text = "Pause Sim") 
-        timelineUpdate()
+        tickStep()
 
-def resetSimulation():
-    global timelineRunning, timelineCount, lastPoint, ticker
+def resetSimulation(): #makes it so you can reset the sim
+    global ticker, timelineRunning, dataPoints
 
     timelineRunning = False
-    timelineCount = 0
-    lastPoint = None
-    ticker = 0
+    ticker = 0 
+    dataPoints.clear()
+
     clockLabel.config(text = f"Day: {ticker}")
-    timelineCanvas.delete("all")
-    timelineGrid()
     button3.config(text = "Start Sim")
 
-#go
+    timelineGrid()
+
+    displayNum.config(state = "normal")
+    displayNum.delete("1.0", "end")
+    displayNum.insert("end", "values: \n")
+    displayNum.config(state = "disabled")
+
+#button configs
+button3.config(command = toggleSimulation)
+button4.config(command = resetSimulation)
+
+#actually make the thing go
+timelineGrid()
 root.mainloop()
