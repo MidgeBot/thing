@@ -62,25 +62,23 @@ rightPanel.pack(side = "right", fill = "both", expand = True)
 rightUpperBox = tk.Frame(rightPanel, bg = "white", bd = 1, relief = "solid")
 rightUpperBox.pack(fill = "both", expand = True, padx = 10, pady = (10, 5))
 
-#left side of the upper right panel 
 leftPane = tk.Frame(rightUpperBox, bg = "white")
 leftPane.pack(side = "left", fill = "both", expand = True)
 
-rightUpperLeftCanvas = tk.Canvas(leftPane, bg = "white", height = 100)
-rightUpperLeftCanvas.pack(side = "left", fill = "both", expand = True)
+rightPane = tk.Frame(rightUpperBox, bg = "white")
+rightPane.pack(side = "left", fill = "both", expand = True)
+
+rightTitle = tk.Label(rightPane, text = "rightie", bg = "lightblue", font = ("Arial", 12))
+rightTitle.pack(fill = "x")
 
 leftTitle = tk.Label(leftPane, text = "leftie", bg = "lightblue", font = ("Arial", 12))
 leftTitle.pack(fill = "x")
 
-#right side of the upper right panel
-rightPane = tk.Frame(rightUpperBox, bg = "white")
-rightPane.pack(side = "left", fill = "both", expand = True)
+rightUpperLeftCanvas = tk.Canvas(leftPane, bg = "white", height = 100)
+rightUpperLeftCanvas.pack(side = "left", fill = "both", expand = True)
 
 rightUpperRightCanvas = tk.Canvas(rightPane, bg = "white", height = 100)
 rightUpperRightCanvas.pack(side = "left", fill = "both", expand = True)
-
-rightTitle = tk.Label(rightPane, text = "rightie", bg = "lightblue", font = ("Arial", 12))
-rightTitle.pack(fill = "x")
 
 #timeline 
 rightLowerBox = tk.Frame(rightPanel, height = 200, bg = "lightgrey", highlightbackground = "black", highlightthickness = 1)
@@ -133,7 +131,7 @@ def tickStep(): #clock moment
 
     ticker += 1
     clockLabel.config(text = f"Day: {ticker}")
-    rightLowerBox.after(500, tickStep)
+    rightLowerBox.after(50, tickStep)
 
 def toggleSimulation(): #makes it so you can pause the sim
     global timelineRunning
