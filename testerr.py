@@ -1,4 +1,5 @@
 import tkinter as tk
+from PIL import Image, ImageTk
 import random
 
 root = tk.Tk()
@@ -8,13 +9,18 @@ root.geometry("1200x800")
 #variables
 ticker = 0 #what day are we on
 dayCount = 17 #max day count
-timelineRunning = False
 gridlinePositions = []
 dataPoints = []
 
 #user entered variables NOT HOOKED UP TO ANYTHING YET but i think they go here. maybe.
 ageGroup = None
 vaccineStatus = None
+
+frames = []
+frameCount = 0
+currentFrame = 0
+frameDelay = 50 #ms per frame
+isPlaying = False
 
 #title 
 titleFrame = tk.Frame(root, height = 50, bg = 'lightblue')
@@ -87,6 +93,7 @@ rightLowerBox.pack(fill = "x", padx = 10, pady = (0,10))
 timelineCanvas = tk.Canvas(rightLowerBox, bg = "white", height = 200)
 timelineCanvas.pack(fill = "both", padx = 5, pady = 5)
 
+
 def timelineGrid(event = None): #draws the gridelines + adds in the actual line
     global gridlinePositions
 
@@ -107,18 +114,75 @@ def timelineGrid(event = None): #draws the gridelines + adds in the actual line
             timelineCanvas.create_line(last[0], last[1], x, y, fill = "blue", width = 2)
         last = (x, y)
 
-timelineCanvas.bind("<Configure>", timelineGrid)
 
-def tickStep(): #clock moment
-    global ticker, timelineRunning
+def loadGif(path):
+    global frames
+    frames = []
+    img = Image.open(path)
 
-    if not timelineRunning:
+    try:
+        while True:
+            frame = ImageTk.PhotoImage(img.copy().convert("RGBA"))
+            frames.append(frame)
+            img.seek(len(frames))
+    except EOFError:
+        pass
+    return frames
+
+def playGifForDay(day):
+    global frames, frameCount, currentFrame
+
+    timelineGrid()
+
+    gifPath = f"day{day}_{ageGroup}_{vaccineStatus}.gif"
+    try:
+        loadGif(gifPath)
+        frameCount = len(frames)
+        currentFrame = 0
+        if frameCount == 0:
+                print (f"No frames in {gifPath}")
+                root.after(100, advanceDay)
+                root.after(200, tickStep)
+        else:
+            showFrame()
+    except Exception as e:
+        print(f"Error loading {gifPath}: {e}")
+        root.after(100, advanceDay)
+        root.after(200, tickStep)
+
+def showFrame():
+    global currentFrame, isPlaying
+
+    if not isPlaying:
         return
+
+    if not frames:
+            tickStep()
+            return
+
+    if currentFrame < frameCount:
+        frame = frames[currentFrame]
+        rightUpperRightCanvas.delete("all")
+        rightUpperRightCanvas.image = frame
+        rightUpperRightCanvas.create_image(0,0, anchor = "nw", image = frame)
+        currentFrame += 1
+        root.after(frameDelay, showFrame)
+    else:
+        advanceDay()
+        tickStep()
+
+def continueSimulation():
+    if isPlaying:
+        playGifForDay(ticker)
+
+def advanceDay():
+    global ticker
+
     if ticker > dayCount:
         timelineRunning = False
         button3.config(text = "Start Sim")
         return
-    
+
     yValue = random.randint(40, 120) #change this once we get actual values
     dataPoints.append((ticker, yValue))
 
@@ -131,21 +195,35 @@ def tickStep(): #clock moment
 
     ticker += 1
     clockLabel.config(text = f"Day: {ticker}")
-    rightLowerBox.after(50, tickStep)
+    
+def tickStep(): #clock moment
+    global isPlaying
+    
+    if isPlaying:
+        if ticker <= dayCount:
+            playGifForDay(ticker)
+        else:
+            isPlaying = False
+            button3.config(text = "Start Sim")
+
 
 def toggleSimulation(): #makes it so you can pause the sim
-    global timelineRunning
+    global isPlaying, ageGroup, vaccineStatus
     
-    timelineRunning = not timelineRunning
-    button3.config(text = "pause sim" if timelineRunning else "resume sim")
+    if not isPlaying:
+        ageGroup = button1Var.get()
+        vaccineStatus = button2Var.get()
 
-    if timelineRunning:
-        tickStep()
+    isPlaying = not isPlaying
+    button3.config(text = "pause sim" if isPlaying else "resume sim")
+
+    if isPlaying:
+        playGifForDay(ticker)
 
 def resetSimulation(): #makes it so you can reset the sim
-    global ticker, timelineRunning, dataPoints
+    global ticker, dataPoints, isPlaying
 
-    timelineRunning = False
+    isPlaying = False
     ticker = 0 
     dataPoints.clear()
 
@@ -158,11 +236,13 @@ def resetSimulation(): #makes it so you can reset the sim
     displayNum.delete("1.0", "end")
     displayNum.insert("end", "values: \n")
     displayNum.config(state = "disabled")
+    rightUpperRightCanvas.delete("all")
 
 #button configs
 button3.config(command = toggleSimulation)
 button4.config(command = resetSimulation)
 
 #actually make the thing go
-timelineGrid()
+timelineCanvas.bind("<Configure>", timelineGrid)
+root.after(100, timelineGrid)
 root.mainloop()
